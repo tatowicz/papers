@@ -12,7 +12,7 @@ device = torch.device("mps")
 torch.manual_seed(0)
 
 batch_size = 64
-num_epochs = 5
+num_epochs = 1
 learn_rate = 1E-3
 weight_decay = 1E-4
 
@@ -139,7 +139,7 @@ def test(dataloader, model, loss_fn):
 
 
 
-# TODO: Fix this to look similar to VisionTransformer but with single channel input
+# TODO: Fix this to look similar to VisionTransformer 
 #model = ViT(image_size=28, patch_size=7, num_classes=10, dim=64, 
 #            depth=6, heads=8, hidden_size=256, channels=1).to(device)
 
