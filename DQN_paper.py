@@ -11,10 +11,11 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
-env = gym.make("CartPole-v1")
+env = gym.make("ALE/Pong-v5", obs_type="grayscale")
 
 # if GPU is to be used
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("mps")
+torch.seed(0)
 
 
 # This is a repdocution of the the Deep Q-Network (DQN) algorithm from the paper
@@ -72,8 +73,12 @@ EPS_DECAY = 1000
 TAU = 0.005
 LR = 1e-4
 
+num_episodes = 500
+steps_done = 0
+
 # Get number of actions from gym action space
 n_actions = env.action_space.n
+
 # Get the number of state observations
 state, info = env.reset()
 n_observations = len(state)
@@ -84,9 +89,6 @@ target_net.load_state_dict(policy_net.state_dict())
 
 optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
 memory = ReplayMemory(10000)
-
-
-steps_done = 0
 
 
 def select_action(state):
@@ -131,6 +133,7 @@ def plot_durations(show_result=False):
 def optimize_model():
     if len(memory) < BATCH_SIZE:
         return
+
     transitions = memory.sample(BATCH_SIZE)
     # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
     # detailed explanation). This converts batch-array of Transitions
@@ -158,32 +161,40 @@ def optimize_model():
     # This is merged based on the mask, such that we'll have either the expected
     # state value or 0 in case the state was final.
     next_state_values = torch.zeros(BATCH_SIZE, device=device)
+
     with torch.no_grad():
         next_state_values[non_final_mask] = target_net(non_final_next_states).max(1)[0]
+
     # Compute the expected Q values
     expected_state_action_values = (next_state_values * GAMMA) + reward_batch
 
     # Compute Huber loss
-    criterion = nn.SmoothL1Loss()
-    loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
+    loss_fn = nn.SmoothL1Loss()
+    loss = loss_fn(state_action_values, expected_state_action_values.unsqueeze(1))
 
     # Optimize the model
     optimizer.zero_grad()
     loss.backward()
+
     # In-place gradient clipping
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
 
 
-num_episodes = 500
-
 for i_episode in range(num_episodes):
     # Initialize the environment and get it's state
     state, info = env.reset()
     state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+    
     for t in count():
         action = select_action(state)
         observation, reward, terminated, truncated, _ = env.step(action.item())
+
+
+        print(f"{observation.shape} {reward} {terminated} {truncated}")
+
+        exit(0)
+
         reward = torch.tensor([reward], device=device)
         done = terminated or truncated
 
@@ -205,8 +216,10 @@ for i_episode in range(num_episodes):
         # θ′ ← τ θ + (1 −τ )θ′
         target_net_state_dict = target_net.state_dict()
         policy_net_state_dict = policy_net.state_dict()
+
         for key in policy_net_state_dict:
             target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
+
         target_net.load_state_dict(target_net_state_dict)
 
         if done:
@@ -221,15 +234,17 @@ plt.ioff()
 plt.show()
 
 
-# Test the model
-env = gym.make("CartPole-v1", render_mode="human")
-observation, info = env.reset(seed=42)
-for _ in range(1000):
-    observation = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
-    action = select_action(observation) 
-    observation, reward, terminated, truncated, info = env.step(action.item())
 
-    if terminated or truncated:
-        observation, info = env.reset()
-      
-env.close()
+def test():
+    # Test the model
+    env = gym.gym.make("ALE/Pong-v5", render_mode="human")
+    observation, info = env.reset(seed=42)
+    for _ in range(1000):
+        observation = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
+        action = select_action(observation) 
+        observation, reward, terminated, truncated, info = env.step(action.item())
+
+        if terminated or truncated:
+            observation, info = env.reset()
+
+    env.close()

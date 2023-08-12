@@ -12,7 +12,7 @@ device = torch.device("mps")
 torch.manual_seed(0)
 
 batch_size = 64
-num_epochs = 1
+num_epochs = 5
 learn_rate = 1E-3
 weight_decay = 1E-4
 
