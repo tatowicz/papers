@@ -12,10 +12,11 @@ device = torch.device("mps")
 torch.manual_seed(0)
 
 batch_size = 64
-num_epochs = 10
+num_epochs = 5
 learn_rate = 1E-3
 weight_decay = 1E-4
 
+# Add Norm
 transform_mnist = transforms.Compose([transforms.ToTensor()])
 
 train_data = datasets.MNIST("data/", train=True, download=True, transform=transform_mnist)
@@ -45,11 +46,11 @@ class ViT(nn.Module):
         self.to_cls_token = nn.Identity()
         self.loss_fn = nn.CrossEntropyLoss()
 
-        #self.mlp_head = nn.Sequential(
-        #    nn.Linear(dim, hidden_size),
-        #    nn.GELU(),
-        #    nn.Linear(hidden_size, num_classes)
-        #)
+        self.mlp_head = nn.Sequential(
+            nn.Linear(dim, hidden_size),
+            nn.GELU(),
+            nn.Linear(hidden_size, num_classes)
+        )
 
     def forward(self, img, mask=None):
         p = self.patch_size
@@ -104,34 +105,55 @@ class ViT(nn.Module):
 
 def train(dataloader, model, optimizer, loss_fn):
     size = len(dataloader.dataset)
-    for batch, (X, y) in enumerate(dataloader): 
+    for batch, (X, y) in tqdm(enumerate(dataloader)): 
         X, y = X.to(device), y.to(device)
 
         optimizer.zero_grad()
         pred = model.forward(X)
-        print(pred)
         loss = loss_fn(pred, y)
         loss.backward()
         optimizer.step()
 
         if batch % 100 == 0:
             loss, current = loss.item(), batch * len(X)
-            print(f"loss: {loss:>7f} [{current:>5d}/{size:>5d}]")
+    
+    print(f"loss: {loss:>7f}")
 
 
+def test(dataloader, model, loss_fn):
+    size = len(dataloader.dataset)
+    num_batches = len(dataloader)
+    test_loss, correct = 0, 0
+
+    with torch.no_grad():
+        for X, y in dataloader:
+            X, y = X.to(device), y.to(device)
+
+            pred = model.forward(X)
+            test_loss = loss_fn(pred, y).item()
+            correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+
+        test_loss /= num_batches
+        correct /= size
+        print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n") 
+
+
+
+# TODO: Fix this to look similar to VisionTransformer but with single channel input
 #model = ViT(image_size=28, patch_size=7, num_classes=10, dim=64, 
 #            depth=6, heads=8, hidden_size=256, channels=1).to(device)
 
+
+# The built in VisionTransformer model only works with 3 channel images, for MINST must modify the channel input
 model = models.VisionTransformer(image_size=28, patch_size=7, num_layers=6, num_heads=8, hidden_dim=784, 
                                  mlp_dim=1024, num_classes=10, dropout=0.2).to(device)
 
-optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate, weight_decay=weight_decay)
+optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate, weight_decay=weight_decay)
+loss_fn = nn.CrossEntropyLoss()
 
 for x in trange(num_epochs):
-    #model.train(train_dataloader, optimizer)
-    loss_fn = nn.CrossEntropyLoss()
     train(train_dataloader, model, optimizer, loss_fn)
 
 
-model.test(test_dataloader)
+test(test_dataloader, model, loss_fn)
 print("Done!")
