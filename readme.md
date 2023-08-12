@@ -12,8 +12,7 @@ Implement papers and models in AI to learn.
 
 
 ## Models
-* Example Torch save
-* Example Onnx save
+* Example Onnx save, run `torch_quickstart.py` 
 * Open .onnx file to view sample model with Netron --> https://github.com/lutzroeder/netron
 
 [1] DQN_paper.py: from 2013 DQN paper, tested using cartpole gym   

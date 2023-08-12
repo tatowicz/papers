@@ -8,13 +8,6 @@ import torch.nn.functional as F
 import matplotlib
 
 
-# See if the environment is working and check basic
-is_ipython = 'inline' in matplotlib.get_backend()
-if is_ipython:
-    from IPython import display
-    print("IPython envionment detected")
-
-
 # if GPU is to be used
 device = torch.device("cuda" if torch.cuda.is_available() else "mps")
 print("Using device: ", device)
