@@ -2,8 +2,7 @@ import torch
 from torch import nn    
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
-
-
+from tqdm import trange, tqdm
 
 train_data = datasets.FashionMNIST(
     root="data",
@@ -61,6 +60,7 @@ optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
 def train(dataloader, model, loss_fn, optimizer):
     size = len(dataloader.dataset)
+    dataloader = tqdm(dataloader)
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
 
