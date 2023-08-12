@@ -4,6 +4,11 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from tqdm import trange, tqdm
 
+
+# Toy example to see if things even work and demo basic functionality
+
+
+# Built in datasets and transforms for easy use
 train_data = datasets.FashionMNIST(
     root="data",
     train=True,
@@ -20,7 +25,10 @@ test_data = datasets.FashionMNIST(
 
 
 batch_size = 64
+epochs = 5
 
+# DataLoader is a wrapper around an iterable dataset, and supports automatic batching, 
+# sampling, shuffling and multiprocess data loading.
 train_dataloader = DataLoader(train_data, batch_size=batch_size)
 test_dataloader = DataLoader(test_data, batch_size=batch_size)
 
@@ -32,6 +40,7 @@ for X, y in test_dataloader:
 
 device = "mps"
 print("Using {} device".format(device))
+
 
 class NeuralNetwork(nn.Module):
     def __init__(self):
@@ -49,11 +58,10 @@ class NeuralNetwork(nn.Module):
         x = self.flatten(x)
         logits = self.linear_relu_stack(x)
         return logits
-    
+
+
 model = NeuralNetwork().to(device)
 print(model)
-
-
 loss_fn = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
@@ -73,7 +81,6 @@ def train(dataloader, model, loss_fn, optimizer):
 
         if batch % 100 == 0:
             loss, current = loss.item(), batch * len(X)
-            print(f"loss: {loss:>7f} [{current:>5d}/{size:>5d}]")
 
 
 def test(dataloader, model, loss_fn):
@@ -94,8 +101,6 @@ def test(dataloader, model, loss_fn):
     print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
 
 
-
-epochs = 5
 for t in range(epochs):
     print(f"Epoch {t+1}\n-------------------------------")
     train(train_dataloader, model, loss_fn, optimizer)
@@ -104,6 +109,10 @@ for t in range(epochs):
 print("Done!")
 
 
-torch.save(model.state_dict(), 'model_weights.pth')
+# Torch Save model 
+torch.save(model.state_dict(), 'weights/model_weights.pth')
 
+# Torch onnx format export can be used to visualize model with Netron (https://netron.app/)
+dummy_input = torch.randn(batch_size, 1, 28, 28, device=device)
+torch.onnx.export(model, dummy_input, "weights/model.onnx", input_names=["image"], output_names=["output"])
 
