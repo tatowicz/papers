@@ -26,15 +26,25 @@ var c = [Float](repeating: 0, count: a.count)
 let start = Date().timeIntervalSince1970
 let iter = 500
 
-// Iterate on DSP_vadd, because larger arrays take up too much memory
+// Iterate on DSP_vopp because larger arrays take up too much memory
 for _ in 1...iter {
-    vDSP_vadd(a, strideA, b, strideB, &c, strideC, n)
+    vDSP_vmul(a, strideA, b, strideB, &c, strideC, n)
 }
     
 let runtime = Date().timeIntervalSince1970 - start
 
 print(runtime)
 
-// Compute # of adds / seconds
+// Compute # of muls / seconds
 let ops = Float(c.count * iter) / Float(runtime) / 1e9
 print(ops, "Gops")
+
+
+// FFT on accelerate
+var real = [Float](repeating: .random(in: 0...1), count: 10000)
+var imaginary = [Float](repeating: 0.0, count: real.count)
+
+
+let length = vDSP_Length(floor(log2(Float(real.count))))
+let weights = vDSP_create_fftsetup
+
