@@ -22,15 +22,13 @@ var b = [Float](repeating: .random(in: 0...1), count: 100000000)
 let n = vDSP_Length(a.count)
 var c = [Float](repeating: 0, count: a.count)
 
-
-let start = Date().timeIntervalSince1970
 let iter = 500
 
+let start = Date().timeIntervalSince1970
 // Iterate on DSP_vopp because larger arrays take up too much memory
 for _ in 1...iter {
     vDSP_vmul(a, strideA, b, strideB, &c, strideC, n)
 }
-    
 let runtime = Date().timeIntervalSince1970 - start
 
 print(runtime)
