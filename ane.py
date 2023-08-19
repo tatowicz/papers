@@ -1,46 +1,32 @@
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch
-import numpy as np
-from ane_transformers.huggingface import distilbert as ane_distilbert
+import torchvision
 
+# Load a pre-trained version of MobileNetV2
+torch_model = torchvision.models.mobilenet_v2(pretrained=True)
 
-# Can we get a transfomer to work on ane with coremltools?
+# Set the model in evaluation mode.
+torch_model.eval()
 
-
-
-model_checkpoint = "apple/ane-distilbert-base-uncased-finetuned-sst-2-english"
-baseline_model = AutoModelForSequenceClassification.from_pretrained(
-    model_checkpoint, return_dict=False, torchscript=True, trust_remote_code=True
-).eval()
-
-
-optimized_model = ane_distilbert.DistilBertForSequenceClassification(baseline_model.config).eval()
-optimized_model.load_state_dict(baseline_model.state_dict())
-
-tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
-tokenized = tokenizer(["This is a test"], return_tensors="pt", max_length=128)
-
-
-with torch.no_grad():
-    output = optimized_model(**tokenized)
-
-
-print(output)
-
+# Trace the model with random data.
+example_input = torch.rand(1, 3, 224, 224) 
+traced_model = torch.jit.trace(torch_model, example_input)
+out = traced_model(example_input)
 
 
 import coremltools as ct
 
-mlmodel = ct.models.MLModel("weights/DistilBERT_fp16.mlpackage/Data/com.apple.CoreML/model.mlmodel")
+# Coremltools doesn't work on python 3.11 so pyenv into a version that works (3.8 works)
 
-input = tokenizer(
-    ["This is a ANE test"],
-    return_tensors="np",
-    max_length=128,
-    padding="max_length"
-)
+# Using image_input in the inputs parameter:
+# Convert to Core ML program using the Unified Conversion API.
+model = ct.convert(
+    traced_model,
+    convert_to="mlprogram",
+    inputs=[ct.TensorType(shape=example_input.shape)]
+ )
 
-output_coreml = mlmodel.predict({
-    "input_ids": input["input_ids"].astype(np.int32),
-    "attention_mask": input["attention_mask"].astype(np.int32),
-})
+
+# Save the converted model.
+# Open he model in XCode to see the inputs and outputs
+# Or open the model in netron
+model.save("weights/newmodel.mlpackage")
