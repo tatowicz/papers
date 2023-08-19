@@ -1,5 +1,7 @@
 import torch
 import torchvision
+import coremltools as ct
+
 
 # Load a pre-trained version of MobileNetV2
 torch_model = torchvision.models.mobilenet_v2(pretrained=True)
@@ -13,7 +15,6 @@ traced_model = torch.jit.trace(torch_model, example_input)
 out = traced_model(example_input)
 
 
-import coremltools as ct
 
 # Coremltools doesn't work on python 3.11 so pyenv into a version that works (3.8 works)
 
@@ -27,6 +28,6 @@ model = ct.convert(
 
 
 # Save the converted model.
-# Open he model in XCode to see the inputs and outputs
+# Open he model in XCode to see the inputs and outputs and perf stats
 # Or open the model in netron
 model.save("weights/newmodel.mlpackage")

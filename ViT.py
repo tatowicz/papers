@@ -18,12 +18,16 @@ num_epochs = 5
 learn_rate = 1E-3
 weight_decay = 1E-4
 
-# TODO: Add Norm to preprocessing
-transform_mnist = transforms.Compose([transforms.ToTensor()])
+# TODO: Add Norm to preprocessing for training set?
+# Add greyscale to work with pytorch vision transformer, I think this made the model worse vs 1 channel
+transform_mnist = transforms.Compose([
+    transforms.Grayscale(num_output_channels=3),
+    transforms.ToTensor()
+    ])
 
 # Basic MNIST dataset downloader and loader
 train_data = datasets.MNIST("data/", train=True, download=True, transform=transform_mnist)
-test_data = datasets.MNIST("data/", train=False, download=True, transform=transforms.ToTensor())
+test_data = datasets.MNIST("data/", train=False, download=True, transform=transform_mnist)
 
 # Cross validation
 train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
@@ -118,9 +122,13 @@ class ViT(nn.Module):
 
         self.pos_embedding = nn.Parameter(torch.randn(1, num_patches + 1, dim))
 
-        # Transform image --> embedding then normalize and linear 
+        # Transform image --> embedding then normalize and linear
+        # Add conv layer to transform 3 channels to dim
+        # Rearrange to (batch, patch, channel), old rearrange for no conv2d
         self.patch_to_embedding = nn.Sequential(
-            Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=patch_size, p2=patch_size),
+            nn.Conv2d(in_channels=3, out_channels=patch_dim, kernel_size=patch_size, stride=patch_size),
+            Rearrange('b c (h) (w) -> b (h w) (c)'),
+            #Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=patch_size, p2=patch_size),
             nn.LayerNorm(patch_dim),
             nn.Linear(patch_dim, dim),
             nn.LayerNorm(dim),
@@ -193,7 +201,7 @@ def test(dataloader, model, loss_fn):
 
 
 
-# The pytorch VisionTransformer model only works with 3 channel images, for MINST must modify the channel input to 1
+# Because this model uses conv2d with 3 channel input we need to use a grayscale transform
 #model = models.VisionTransformer(image_size=28, patch_size=7, num_layers=6, num_heads=8, hidden_dim=784, 
 #                                 mlp_dim=1024, num_classes=10, dropout=0.2).to(device)
 
