@@ -27,7 +27,11 @@ Implement papers and models in AI to learn.
   `papers/` - Will eventually add pdf papers or links in a readme  
 
 
-## Future projects 
+## Notes
+
+
+
+## Todos
 https://blog.dataiku.com/random-network-distillation-a-new-take-on-curiosity-driven-learning
 
 
