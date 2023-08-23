@@ -1,6 +1,5 @@
 data/
 .DS_store
-weights/
 Build/
 build/
 vcpkg/
