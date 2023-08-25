@@ -19,7 +19,7 @@ learn_rate = 1E-3
 weight_decay = 1E-4
 
 # TODO: Add Norm to preprocessing for training set?
-# Add greyscale to work with pytorch vision transformer, I think this made the model worse vs 1 channel
+# Add Grayscale to work with pytorch vision transformer, I think this made the model worse vs 1 channel
 transform_mnist = transforms.Compose([
     transforms.Grayscale(num_output_channels=3),
     transforms.ToTensor()
@@ -95,6 +95,7 @@ class Transformer(nn.Module):
         super().__init__()
         self.norm = nn.LayerNorm(dim)
         self.layers = nn.ModuleList([])
+        # TODO: Look into transformer encoder
         # Depth = number of transformer blocks
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
@@ -167,7 +168,9 @@ class ViT(nn.Module):
 
 def train(dataloader, model, optimizer, loss_fn):
     size = len(dataloader.dataset)
-    for batch, (X, y) in tqdm(enumerate(dataloader)): 
+    model.train()
+    dataloader = tqdm(dataloader)
+    for batch, (X, y) in enumerate(dataloader): 
         X, y = X.to(device), y.to(device)
 
         optimizer.zero_grad()
@@ -175,17 +178,15 @@ def train(dataloader, model, optimizer, loss_fn):
         loss = loss_fn(pred, y)
         loss.backward()
         optimizer.step()
-
-        if batch % 100 == 0:
-            loss, current = loss.item(), batch * len(X)
     
-    print(f"loss: {loss:>7f}")
+    return loss.item()
 
 
 def test(dataloader, model, loss_fn):
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
     test_loss, correct = 0, 0
+    model.eval()
 
     with torch.no_grad():
         for X, y in dataloader:
@@ -197,7 +198,7 @@ def test(dataloader, model, loss_fn):
 
         test_loss /= num_batches
         correct /= size
-        print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n") 
+        print(f"Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n") 
 
 
 
@@ -210,9 +211,17 @@ model = ViT(image_size=28, patch_size=7, num_classes=10, dim=784, depth=6, heads
 optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate, weight_decay=weight_decay)
 loss_fn = nn.CrossEntropyLoss()
 
-for x in trange(num_epochs):
-    train(train_dataloader, model, optimizer, loss_fn)
+print(f"Model: {model}")
+print(f"Training for {num_epochs} epochs...")
+
+for x in range(num_epochs):
+    loss = train(train_dataloader, model, optimizer, loss_fn)
+    test(test_dataloader, model, loss_fn)
+    print(f"Epoch: {x+1}/{num_epochs}")
 
 
-test(test_dataloader, model, loss_fn)
 print("Done!")
+
+# Torch onnx format export can be used to visualize model with Netron (https://netron.app/)
+dummy_input = torch.randn(batch_size, 3, 28, 28, device=device)
+torch.onnx.export(model, dummy_input, "weights/ViT.onnx", input_names=["image"], output_names=["output"])

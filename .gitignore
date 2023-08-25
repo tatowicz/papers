@@ -3,3 +3,4 @@ data/
 Build/
 build/
 vcpkg/
+weights/
