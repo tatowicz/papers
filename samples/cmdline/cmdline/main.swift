@@ -11,9 +11,7 @@ import Accelerate
 print("Hello, World!")
 
 
-let strideA = vDSP_Stride(1)
-let strideB = vDSP_Stride(1)
-let strideC = vDSP_Stride(1)
+let stride = vDSP_Stride(1)
 
 print("Generating data...")
 
@@ -34,7 +32,7 @@ print(size, "GB")
 print(a.count, "MULs")
 
 var start = Date().timeIntervalSince1970
-vDSP_vmul(a, strideA, b, strideB, &c, strideC, n)
+vDSP_vmul(a, stride, b, stride, &c, stride, n)
 var runtime = Date().timeIntervalSince1970 - start
 
 print(runtime, "seconds")
